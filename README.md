@@ -8,8 +8,7 @@ To use this code, please follow the steps below:
 
 1. Clone the repository to your local machine:<br>
    `git clone https://github.com/NacyNiko/naive_rule.git`
-2. Install the required dependencies. We recommend using a virtual environment to keep the dependencies isolated. Navigate to the project directory and run the following command:<br>
-   `pip install -r requirements.txt`
+
    
 ## Usage
 Follow the steps below to run the Naive Rules code:
