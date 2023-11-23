@@ -138,14 +138,13 @@ def find_freq_entity(instance):
 
 
 def make_dictionary(testset, if_relation=False):
+    print('Dictionary creating.')
     dict = {}
     if not if_relation:
         for i, query in enumerate(testset):
-            print(if_relation, i)
             dict[query[0]] = find_freq_entity(query)
     else:
         for i, query in enumerate(testset):
-            print(if_relation, i)
             dict[(query[0], query[1])] = find_freq_entity_rel(query)
     with open(f'dict_{args.dataset}_{args.ICEWS15_rels}_{if_relation}_lhs.pkl', 'wb') as f:
         pickle.dump(dict, f)
@@ -269,7 +268,7 @@ def get_ranking(
             print(str(i) + ' ' + str(rank))
             rule_hits[i, 4] = rank
             ranks[i] = rank
-    np.savetxt('rule_hit_'+ str(args.dataset) + f'lhs_{time.time()}.csv', rule_hits.astype('int'),delimiter=',')
+    # np.savetxt('rule_hit_'+ str(args.dataset) + f'lhs_{time.time()}.csv', rule_hits.astype('int'),delimiter=',')
     # np.save(f'my_array_{args.dataset}.npy', data_log)
     return ranks
 
@@ -330,4 +329,3 @@ for _ in range(1):
     results = [ranks.mean(), mean_reciprocal_rank, hits_at_1, hits_at_3, hits_at_10]
     tem = pd.DataFrame(np.array(results).reshape(1, 5), columns=['Rank mean', 'MRR', 'hits 1', 'hits 3', 'hits 10'])
     lhs_results = pd.concat([lhs_results, tem], axis=0)
-# lhs_results.to_csv('lhs_results_15.csv')
