@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    '--dataset', type=str, default='ICEWSRR',
+    '--dataset', type=str, default='ICEWS14RR',
     help="Dataset name"
 )
 
