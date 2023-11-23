@@ -18,4 +18,5 @@ Follow the steps below to run the Naive Rules code:
 2. Next, run the `model_rule_rhs.py` and `model_rule_lhs.py` scripts separately. These scripts calculate the scores for rhs and lhs, respectively. Make sure to specify the dataset as either `ICEWS14RR` or `ICEWS15RR` using the `--dataset` flag.<br>
    `python model_rule_rhs.py --dataset ICEWS14RR`<br>
    `python model_rule_lhs.py --dataset ICEWS14RR`
+3. The averange of rhs score and lhs score was used as the final score.
    
