@@ -17,6 +17,6 @@ Follow the steps below to run the Naive Rules code:
 1. Run the `process_icews.py` script to preprocess the dataset. This script will perform necessary data transformations.<br>
    `python process_icews.py`
 2. Next, run the `model_rule_rhs.py` and `model_rule_lhs.py` scripts separately. These scripts calculate the scores for rhs and lhs, respectively. Make sure to specify the dataset as either `ICEWS14RR` or `ICEWS15RR` using the `--dataset` flag.<br>
-   `python model_rule_rhs.py --dataset ICEWS14RR`
+   `python model_rule_rhs.py --dataset ICEWS14RR`<br>
    `python model_rule_lhs.py --dataset ICEWS14RR`
    
