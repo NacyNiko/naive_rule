@@ -14,7 +14,7 @@ parser = argparse.ArgumentParser(
 )
 
 parser.add_argument(
-    '--dataset', type=str, default='ICEWS14RR',
+    '--dataset', type=str, default='YAGO',
     help="Dataset name"
 )
 parser.add_argument(
@@ -115,7 +115,10 @@ def find_reverse(instance):
     return sorted_reverse_entity
 
 def find_freq_entity_rel(instance):
-    head, rel, tail, time = instance
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
     selected = (train[:,1] == rel) & (train[:, 0] == head)
     selected = train[selected]
     if len(selected) > 0:
@@ -126,7 +129,10 @@ def find_freq_entity_rel(instance):
     return sorted_freq_entity_rel
 
 def find_freq_entity(instance):
-    head, rel, tail, time = instance
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
     selected = train[:, 0] == head
     selected = train[selected]
     if len(selected) > 0:
@@ -150,14 +156,18 @@ def make_dictionary(testset, if_relation=False):
         pickle.dump(dict, f)
 
 def rank_entity_rules(instance,filter_out):
-    head, rel, tail, time = instance
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
     rank_entity, entity_temporal, entity_static = [], [], []
-    if rel in symmetry_rel.keys():
-        entity_temporal = find_symmetry_temporal(instance)
-        entity_static = find_symmetry(instance)
-    elif rel in reverse_rel.keys():
-        entity_temporal = find_reverse_temporal(instance)
-        entity_static = find_reverse(instance)
+    if args.dataset in ['ICEWS14RR', 'ICEWS15RR']:
+        if rel in symmetry_rel.keys():
+            entity_temporal = find_symmetry_temporal(instance)
+            entity_static = find_symmetry(instance)
+        elif rel in reverse_rel.keys():
+            entity_temporal = find_reverse_temporal(instance)
+            entity_static = find_reverse(instance)
     # freq_entity_rel = find_freq_entity_rel(instance)
     # freq_entity = find_freq_entity(instance)
 
@@ -242,7 +252,10 @@ def get_ranking(
         make_dictionary(queries, True)
         for i, query in enumerate(queries):
             # filter_out = filters[(query[0], query[1], query[3])]
-            filter_out = filters[(query[0], query[1]+dataset.n_predicates // 2, query[3])]
+            if len(query) == 4:
+                filter_out = filters[(query[0], query[1]+dataset.n_predicates // 2, query[3])]
+            else:
+                filter_out = filters[(query[0], query[1] + dataset.n_predicates // 2, query[3],query[4])]
             rank_entity, rules = rank_entity_rules(query, filter_out)
             # filter_out = filters[(query[0], query[1], query[3])]
             # temp_dict = {'key': [query[0], query[1], query[3]], 'filter out': filter_out, 'label': [query[2]],
@@ -265,7 +278,7 @@ def get_ranking(
             # filter_out_index_less = [i<rank for i in filter_out_index]
             rank = rank - sum(filter_out_index_less) + 1
 
-            print(str(i) + ' ' + str(rank))
+            #print(str(i) + ' ' + str(rank))
             rule_hits[i, 4] = rank
             ranks[i] = rank
     # np.savetxt('rule_hit_'+ str(args.dataset) + f'lhs_{time.time()}.csv', rule_hits.astype('int'),delimiter=',')
@@ -304,28 +317,29 @@ def hits_k_max(q, ranks):
         hits_at[m] = np.mean(max_ranks)
     return hits_at
 
-lhs_results = pd.DataFrame(columns=['Rank mean', 'MRR', 'hits 1', 'hits 3', 'hits 10'])
-for _ in range(1):
-    ranks = get_ranking().astype(int)
-    queries = dataset.get_examples('test')
-    copy = np.copy(queries)
-    tmp = np.copy(copy[:, 0])
-    copy[:, 0] = copy[:, 2]
-    copy[:, 2] = tmp
-    queries = copy
-    macro = mean_rank_max(queries, ranks)
-    hits_macro = hits_k_max(dataset.get_examples('test'), ranks)
-    print(f'Macro_lhs:{macro}')
-    print(f'Macro_hits:{hits_macro}')
-    print(ranks.mean())
-    mean_reciprocal_rank = np.mean(1. / ranks)
-    print(mean_reciprocal_rank)
-    hits_at_1 = np.mean(ranks<=1)
-    hits_at_3 = np.mean(ranks<=3)
-    hits_at_10 = np.mean(ranks<=10)
-    print(hits_at_1)
-    print(hits_at_3)
-    print(hits_at_10)
-    results = [ranks.mean(), mean_reciprocal_rank, hits_at_1, hits_at_3, hits_at_10]
-    tem = pd.DataFrame(np.array(results).reshape(1, 5), columns=['Rank mean', 'MRR', 'hits 1', 'hits 3', 'hits 10'])
-    lhs_results = pd.concat([lhs_results, tem], axis=0)
+if __name__ == '__main__':
+    lhs_results = pd.DataFrame(columns=['Rank mean', 'MRR', 'hits 1', 'hits 3', 'hits 10'])
+    for _ in range(1):
+        ranks = get_ranking().astype(int)
+        queries = dataset.get_examples('test')
+        copy = np.copy(queries)
+        tmp = np.copy(copy[:, 0])
+        copy[:, 0] = copy[:, 2]
+        copy[:, 2] = tmp
+        queries = copy
+        macro = mean_rank_max(queries, ranks)
+        hits_macro = hits_k_max(dataset.get_examples('test'), ranks)
+        print(f'Macro_lhs:{macro}')
+        print(f'Macro_hits:{hits_macro}')
+        print(ranks.mean())
+        mean_reciprocal_rank = np.mean(1. / ranks)
+        print(mean_reciprocal_rank)
+        hits_at_1 = np.mean(ranks<=1)
+        hits_at_3 = np.mean(ranks<=3)
+        hits_at_10 = np.mean(ranks<=10)
+        print(hits_at_1)
+        print(hits_at_3)
+        print(hits_at_10)
+        results = [ranks.mean(), mean_reciprocal_rank, hits_at_1, hits_at_3, hits_at_10]
+        tem = pd.DataFrame(np.array(results).reshape(1, 5), columns=['Rank mean', 'MRR', 'hits 1', 'hits 3', 'hits 10'])
+        lhs_results = pd.concat([lhs_results, tem], axis=0)

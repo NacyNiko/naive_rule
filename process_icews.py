@@ -31,11 +31,15 @@ def prepare_dataset(path, name):
         file_path = os.path.join(path, f)
         to_read = open(file_path, 'r', encoding='utf-8')
         for line in to_read.readlines():
-            lhs, rel, rhs, timestamp = line.strip().split('\t')
+            instance =  line.strip().split('\t')
+            lhs, rel, rhs, timestamp = instance[0], instance[1], instance[2], instance[3]
             entities.add(lhs)
             entities.add(rhs)
             relations.add(rel)
             timestamps.add(timestamp)
+            if len(instance) == 5:
+                end_time = instance[4]
+                timestamps.add(end_time)
         to_read.close()
 
     entities_to_id = {x: i for (i, x) in enumerate(sorted(entities))}
@@ -63,9 +67,16 @@ def prepare_dataset(path, name):
         to_read = open(file_path, 'r', encoding='utf-8')
         examples = []
         for line in to_read.readlines():
-            lhs, rel, rhs, ts = line.strip().split('\t')
+            instance =  line.strip().split('\t')
+            lhs, rel, rhs, ts = instance[0], instance[1], instance[2], instance[3]
+            if len(instance) == 5:
+                end_time = instance[4]
             try:
-                examples.append([entities_to_id[lhs], relations_to_id[rel], entities_to_id[rhs], timestamps_to_id[ts]])
+                if len(instance) == 4:
+                    examples.append([entities_to_id[lhs], relations_to_id[rel], entities_to_id[rhs], timestamps_to_id[ts]])
+                else:
+                    examples.append(
+                        [entities_to_id[lhs], relations_to_id[rel], entities_to_id[rhs], timestamps_to_id[ts],timestamps_to_id[end_time]])
             except ValueError:
                 continue
         out = open(Path(DATA_PATH) / name / (f + '.pickle'), 'wb')
@@ -78,9 +89,14 @@ def prepare_dataset(path, name):
     to_skip = {'lhs': defaultdict(set), 'rhs': defaultdict(set)}
     for f in files:
         examples = pickle.load(open(Path(DATA_PATH) / name / (f + '.pickle'), 'rb'))
-        for lhs, rel, rhs, ts in examples:
-            to_skip['lhs'][(rhs, rel + n_relations, ts)].add(lhs)  # reciprocals
-            to_skip['rhs'][(lhs, rel, ts)].add(rhs)
+        if len(examples[0]) == 4:
+            for lhs, rel, rhs, ts in examples:
+                to_skip['lhs'][(rhs, rel + n_relations, ts)].add(lhs)  # reciprocals
+                to_skip['rhs'][(lhs, rel, ts)].add(rhs)
+        else:
+            for lhs, rel, rhs, ts, te in examples:
+                to_skip['lhs'][(rhs, rel + n_relations, ts, te)].add(lhs)  # reciprocals
+                to_skip['rhs'][(lhs, rel, ts, te)].add(rhs)
 
     to_skip_final = {'lhs': {}, 'rhs': {}}
     for kk, skip in to_skip.items():
@@ -98,7 +114,8 @@ def prepare_dataset(path, name):
         'both': np.zeros(n_entities)
     }
 
-    for lhs, rel, rhs, _ts in examples:
+    for ins in examples:
+        lhs, rel, rhs, _, _ = ins
         counters['lhs'][lhs] += 1
         counters['rhs'][rhs] += 1
         counters['both'][lhs] += 1
@@ -111,7 +128,7 @@ def prepare_dataset(path, name):
 
 
 if __name__ == "__main__":
-    datasets = ['ICEWS14RR', 'ICEWS15RR']
+    datasets = ['YAGO']
     for d in datasets:
         print("Preparing dataset {}".format(d))
         prepare_dataset(
