@@ -1,7 +1,6 @@
 # Naive Rules
 
-This repository contains the implementation code for Naive Rules, a method for analyzing data based on the modified ICEWS14 and ICEWS05-15 datasets that have been resegmented to eliminate leakage issues.
-
+This repository contains the implementation code for Naive Rules, a method for analyzing data based on the modified ICEWS14 and ICEWS05-15 datasets that have been resegmented to eliminate leakage issues. The paper link is [Do Temporal Knowledge Graph Embedding Models Learn or Memorize Shortcuts?](https://openreview.net/forum?id=UMokRwWfLW&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DNeurIPS.cc%2F2023%2FWorkshop%2FTGL%2FAuthors%23your-submissions))
 ## Installation
 
 To use this code, please follow the steps below:
