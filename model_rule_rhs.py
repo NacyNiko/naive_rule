@@ -178,7 +178,7 @@ def find_recent_entity(instance):
         time_gap = [abs(int(i) - int(time)) for i in selected[:,3]]
         index = np.argsort(time_gap)
         recent_selected = selected[index][:,2]
-        recent_selected = merge_repeated_entities(recent_selected[0])
+        recent_selected = merge_repeated_entities(recent_selected)
         sorted_freq_entity = rank_by_freq(recent_selected)
     else:
         sorted_freq_entity = []
@@ -221,7 +221,7 @@ def rank_entity_rules(instance, filter_out):
         head, rel, tail, time = instance
     else:
         head, rel, tail, time, time_e = instance
-    rank_entity, entity_temporal, entity_static = [], [], []
+    rank_entity, entity_temporal, entity_static, entity_rel = [], [], [], []
     if args.dataset in ['ICEWS14RR', 'ICEWS15RR']:
         if rel in symmetry_rel.keys():
             entity_temporal = find_symmetry_temporal(instance)
@@ -238,20 +238,21 @@ def rank_entity_rules(instance, filter_out):
 
     if args.dataset in ['YAGO','WIKI']:
         dict_recent = pickle.load(open('dict_' + str(args.dataset) + '_recent_rhs.pkl', 'rb'))
-        entity_temporal = dict_recent[(instance[0],instance[1])]
-        freq_entity_rel = freq_entity
+        entity_temporal = dict_recent[(instance[0],instance[1])][:1]
+        # entity_static = freq_entity_rel
+        # freq_entity_rel = freq_entity
         dict_rel = pickle.load(open('dict_' + str(args.dataset) + '_rel_rhs.pkl', 'rb'))
-        freq_entity = dict_rel[instance[1]]
+        entity_rel = dict_rel[instance[1]]
         # dict_rel = pickle.load(open('dict_' + str(args.dataset) + '_recent_rel_rhs.pkl', 'rb'))
         # freq_entity = dict_rel[instance[1]]
 
-    rank_entity = entity_temporal + entity_static + freq_entity_rel + freq_entity
+    rank_entity = entity_temporal + entity_static + freq_entity_rel + freq_entity + entity_rel
     rank_entity = merge_repeated_entities(rank_entity)
-    #filter_entities = [i for i in rank_entity if ((i not in filter_out) or (i == tail))]
-    entities = list(range(sizes[0]))
-    entities = [i for i in entities if i not in rank_entity]
-    random.shuffle(entities)
-    rank_entity = rank_entity+entities
+    # #filter_entities = [i for i in rank_entity if ((i not in filter_out) or (i == tail))]
+    # entities = list(range(sizes[0]))
+    # entities = [i for i in entities if i not in rank_entity]
+    #random.shuffle(entities)
+    #rank_entity = rank_entity+entities
     return rank_entity, (entity_temporal, entity_static, freq_entity_rel, freq_entity)
 
 
@@ -305,10 +306,18 @@ def get_ranking(
         #     data_log = np.concatenate([data_log, reshaped_array], axis=0)
 
         #filter_entities = [i for i in rank_entity if ((i not in filter_out) or (i == query[2]))]
-        rank = rank_entity.index(query[2])
-        filter_out_index_less = [rank_entity.index(i)<rank for i in filter_out]
-        #filter_out_index_less = [i<rank for i in filter_out_index]
-        rank = rank - sum(filter_out_index_less) + 1
+        if query[2] in rank_entity:
+            rank = rank_entity.index(query[2])
+            count = 0
+            for j in filter_out:
+                if j in rank_entity[:rank]:
+                    count = count + 1
+            #filter_out_index_less = [1 for i in filter_out if i in rank_entity]
+            #filter_out_index_less = [i<rank for i in filter_out_index]
+            #rank = rank - sum(filter_out_index_less) + 1
+            rank = rank - count + 1
+        else:
+            rank = random.randint(len(rank_entity)+1,sizes[0])
 
         print(str(i) + ' ' + str(rank))
         rule_hits[i, 4] = rank
