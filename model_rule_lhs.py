@@ -8,13 +8,14 @@ from typing import Tuple, List, Dict
 import numpy as np
 import random
 import pandas as pd
+import os
 
 parser = argparse.ArgumentParser(
     description="Temporal ComplEx"
 )
 
 parser.add_argument(
-    '--dataset', type=str, default='YAGO',
+    '--dataset', type=str, default='WIKI',
     help="Dataset name"
 )
 parser.add_argument(
@@ -142,18 +143,35 @@ def find_freq_entity(instance):
         sorted_freq_entity = []
     return sorted_freq_entity
 
+def find_recent_entity(instance):
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
+    selected = (train[:,1] == rel) & (train[:, 0] == head)
+    selected = train[selected]
+    if len(selected) > 0:
+        time_gap = [abs(int(i) - int(time)) for i in selected[:,3]]
+        index = np.argsort(time_gap)
+        recent_selected = selected[index][:,2]
+        recent_selected = merge_repeated_entities(recent_selected[0])
+        sorted_freq_entity = rank_by_freq(recent_selected)
+    else:
+        sorted_freq_entity = []
+    return sorted_freq_entity
 
 def make_dictionary(testset, if_relation=False):
     print('Dictionary creating.')
-    dict = {}
-    if not if_relation:
-        for i, query in enumerate(testset):
-            dict[query[0]] = find_freq_entity(query)
-    else:
-        for i, query in enumerate(testset):
-            dict[(query[0], query[1])] = find_freq_entity_rel(query)
-    with open(f'dict_{args.dataset}_{args.ICEWS15_rels}_{if_relation}_lhs.pkl', 'wb') as f:
-        pickle.dump(dict, f)
+    if not os.path.exists(f'dict_{args.dataset}_{args.ICEWS15_rels}_{if_relation}_lhs.pkl'):
+        dict = {}
+        if not if_relation:
+            for i, query in enumerate(testset):
+                dict[query[0]] = find_freq_entity(query)
+        else:
+            for i, query in enumerate(testset):
+                dict[(query[0], query[1])] = find_freq_entity_rel(query)
+        with open(f'dict_{args.dataset}_{args.ICEWS15_rels}_{if_relation}_lhs.pkl', 'wb') as f:
+            pickle.dump(dict, f)
 
 def rank_entity_rules(instance,filter_out):
     if len(instance) == 4:
@@ -278,7 +296,7 @@ def get_ranking(
             # filter_out_index_less = [i<rank for i in filter_out_index]
             rank = rank - sum(filter_out_index_less) + 1
 
-            #print(str(i) + ' ' + str(rank))
+            print(str(i) + ' ' + str(rank))
             rule_hits[i, 4] = rank
             ranks[i] = rank
     # np.savetxt('rule_hit_'+ str(args.dataset) + f'lhs_{time.time()}.csv', rule_hits.astype('int'),delimiter=',')
