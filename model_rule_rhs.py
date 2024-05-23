@@ -59,6 +59,8 @@ elif args.dataset == 'gdelt':
 dataset = TemporalDataset(args.dataset)
 sizes = dataset.get_shape()
 train = dataset.get_train()
+valid = dataset.data['valid']
+train = np.vstack((train, valid))
 
 def rank_by_freq(e_list):
     e_list = pd.DataFrame(e_list)
@@ -135,13 +137,28 @@ def find_freq_entity_rel(instance):
         sorted_freq_entity_rel = []
     return sorted_freq_entity_rel
 
-
-def find_freq_entity(instance):
+def find_recent_entity_rel(instance,index=0):
     if len(instance) == 4:
         head, rel, tail, time = instance
     else:
         head, rel, tail, time, time_e = instance
-    selected = train[:, 0] == head
+    selected = train[:, index] == instance[index]
+    selected = train[selected]
+    if len(selected) > 0:
+        time_gap = [abs(int(i) - int(time)) for i in selected[:,3]]
+        index = np.argsort(time_gap)
+        recent_selected = merge_repeated_entities(selected[index][:,2])
+        sorted_freq_entity = rank_by_freq(recent_selected)
+    else:
+        sorted_freq_entity = []
+    return sorted_freq_entity
+
+def find_freq_entity(instance,index=0):
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
+    selected = train[:, index] == instance[index]
     selected = train[selected]
     if len(selected) > 0:
         freq_entity = selected[:,2]
@@ -150,6 +167,22 @@ def find_freq_entity(instance):
         sorted_freq_entity = []
     return sorted_freq_entity
 
+def find_recent_entity(instance):
+    if len(instance) == 4:
+        head, rel, tail, time = instance
+    else:
+        head, rel, tail, time, time_e = instance
+    selected = (train[:,1] == rel) & (train[:, 0] == head)
+    selected = train[selected]
+    if len(selected) > 0:
+        time_gap = [abs(int(i) - int(time)) for i in selected[:,3]]
+        index = np.argsort(time_gap)
+        recent_selected = selected[index][:,2]
+        recent_selected = merge_repeated_entities(recent_selected[0])
+        sorted_freq_entity = rank_by_freq(recent_selected)
+    else:
+        sorted_freq_entity = []
+    return sorted_freq_entity
 
 def make_dictionary(testset, if_relation=False):
     if not os.path.exists(f'dict_{args.dataset}_{if_relation}_rhs.pkl'):
@@ -157,11 +190,28 @@ def make_dictionary(testset, if_relation=False):
         if not if_relation:
             for i, query in enumerate(testset):
                 #print(if_relation, i)
-                dict[query[0]] = find_freq_entity(query)
+                if query[0] not in dict.keys():
+                    dict[query[0]] = find_freq_entity(query)
+        elif if_relation == 'recent':
+            for i, query in enumerate(testset):
+                #print(if_relation, i)
+                if query[0] not in dict.keys():
+                    dict[(query[0],query[1])] = find_recent_entity(query)
+        elif if_relation == 'rel':
+            for i, query in enumerate(testset):
+                #print(if_relation, i)
+                if query[1] not in dict.keys():
+                    dict[(query[1])] = find_freq_entity(query, index=1)
+        elif if_relation == 'recent_rel':
+            for i, query in enumerate(testset):
+                # print(if_relation, i)
+                if query[1] not in dict.keys():
+                    dict[(query[1])] = find_recent_entity_rel(query, index=1)
         else:
             for i, query in enumerate(testset):
                 #print(if_relation, i)
-                dict[(query[0], query[1])] = find_freq_entity_rel(query)
+                if (query[0], query[1]) not in dict.keys():
+                    dict[(query[0], query[1])] = find_freq_entity_rel(query)
         with open(f'dict_{args.dataset}_{if_relation}_rhs.pkl', 'wb') as f:
             pickle.dump(dict, f)
 
@@ -179,14 +229,22 @@ def rank_entity_rules(instance, filter_out):
         elif rel in reverse_rel.keys():
             entity_temporal = find_reverse_temporal(instance)
             entity_static = find_reverse(instance)
-    # freq_entity_rel = find_freq_entity_rel(instance)
-    # freq_entity = find_freq_entity(instance)
 
     dict_True = pickle.load(open('dict_' + str(args.dataset) + '_True_rhs.pkl', 'rb'))
     dict_False = pickle.load(open('dict_' + str(args.dataset) + '_False_rhs.pkl', 'rb'))
 
-    freq_entity_rel = dict_True[instance[0], instance[1]]
+    freq_entity_rel = dict_True[(instance[0], instance[1])]
     freq_entity = dict_False[instance[0]]
+
+    if args.dataset in ['YAGO','WIKI']:
+        dict_recent = pickle.load(open('dict_' + str(args.dataset) + '_recent_rhs.pkl', 'rb'))
+        entity_temporal = dict_recent[(instance[0],instance[1])]
+        freq_entity_rel = freq_entity
+        dict_rel = pickle.load(open('dict_' + str(args.dataset) + '_rel_rhs.pkl', 'rb'))
+        freq_entity = dict_rel[instance[1]]
+        # dict_rel = pickle.load(open('dict_' + str(args.dataset) + '_recent_rel_rhs.pkl', 'rb'))
+        # freq_entity = dict_rel[instance[1]]
+
     rank_entity = entity_temporal + entity_static + freq_entity_rel + freq_entity
     rank_entity = merge_repeated_entities(rank_entity)
     #filter_entities = [i for i in rank_entity if ((i not in filter_out) or (i == tail))]
@@ -221,6 +279,10 @@ def get_ranking(
     data_log = None
     make_dictionary(queries, False)
     make_dictionary(queries, True)
+    if args.dataset in ['YAGO','WIKI']:
+        make_dictionary(queries,'recent')
+        make_dictionary(queries,'rel')
+        make_dictionary(queries, 'recent_rel')
     for i, query in enumerate(queries):
         if len(query) == 4:
             filter_out = filters[(query[0], int(query[1]), query[3])]
