@@ -22,6 +22,10 @@ parser.add_argument(
 parser.add_argument(
     '--ICEWS15_rels', type=str, default='static'
 )
+
+parser.add_argument(
+    '--use_valid', action='store_true'
+)
 args = parser.parse_args()
 
 if args.dataset == 'ICEWS14' or args.dataset == 'ICEWS14RR':
@@ -237,8 +241,8 @@ def rank_entity_rules(instance, filter_out):
     freq_entity = dict_False[instance[0]]
 
     if args.dataset in ['YAGO','WIKI']:
-        dict_recent = pickle.load(open('dict_' + str(args.dataset) + '_recent_rhs.pkl', 'rb'))
-        entity_temporal = dict_recent[(instance[0],instance[1])][:1]
+        # dict_recent = pickle.load(open('dict_' + str(args.dataset) + '_recent_rhs.pkl', 'rb'))
+        # entity_temporal = dict_recent[(instance[0],instance[1])][:1]
         # entity_static = freq_entity_rel
         # freq_entity_rel = freq_entity
         dict_rel = pickle.load(open('dict_' + str(args.dataset) + '_rel_rhs.pkl', 'rb'))
