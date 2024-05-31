@@ -32,7 +32,7 @@ if args.dataset == 'ICEWS14' or args.dataset == 'ICEWS14RR':
     symmetry_rel = {53:53,103:103,115:115, 207:207, 98:98, 90:90, 162:162, 134:134, 57:57}
     reverse_rel = {142:155, 155:142, 223:170, 170:223}
 elif args.dataset == 'ICEWS14TIT':
-    symmetry_rel = {18:118,44:44,41:41, 77:77, 0:0, 43:43, 10:10}
+    symmetry_rel = {18:18,44:44,41:41, 77:77, 0:0, 43:43, 10:10}
     reverse_rel = {14:7, 7:14, 37:46, 46:37}
 elif args.dataset == 'ICEWS18':
     symmetry_rel = {61:61, 47:47, 76:76, 59:59, 25:25, 41:41, 125:125, 17:17, 26:26}
@@ -63,8 +63,9 @@ elif args.dataset == 'gdelt':
 dataset = TemporalDataset(args.dataset)
 sizes = dataset.get_shape()
 train = dataset.get_train()
-valid = dataset.data['valid']
-train = np.vstack((train, valid))
+if args.use_valid:
+    valid = dataset.data['valid']
+    train = np.vstack((train, valid))
 
 def rank_by_freq(e_list):
     e_list = pd.DataFrame(e_list)
